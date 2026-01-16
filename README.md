@@ -1,4 +1,3 @@
-````md
 # RAG API with FastAPI + Chroma + Ollama (Local)
 
 A **Retrieval-Augmented Generation (RAG)** API built with **FastAPI**, **ChromaDB**, and **Ollama**.  
@@ -196,7 +195,3 @@ python embed.py
 ## License
 
 MIT — see `LICENSE`.
-
-```
-::contentReference[oaicite:0]{index=0}
-```

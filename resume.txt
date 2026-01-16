@@ -1,0 +1,195 @@
+PROFILE
+name: Tanmay Jhunjhunwala
+location: Toronto, ON
+phone: +1 (437) 660-8904
+email: tanmay.work96@outlook.com
+linkedin: www.linkedin.com/in/tanmay-j
+github: github.com/tanmayj-hub
+
+SUMMARY
+role_focus: AWS Solutions Architect | DevOps | Cloud Engineer
+years_experience: 5
+domains: enterprise cloud migration; telecom; retail; commodity trading
+value_summary: Boosted revenue, accelerated delivery, and reduced cloud OpEx through secure, cost-optimized AWS solutions and automated CI/CD.
+specialties:
+- containerized microservices on EKS
+- serverless patterns (Lambda, API Gateway)
+- IaC automation (Terraform, CloudFormation)
+- zero-trust IAM
+- agentic AI workflows (AWS Bedrock, LangChain)
+
+CERTIFICATIONS
+- AWS Certified Solutions Architect – Associate (SAA-C03)
+- AWS Certified Cloud Practitioner (CLF-C02)
+
+SKILLS
+aws_core:
+- Aurora PostgreSQL
+- CloudFormation
+- CloudFront
+- CloudTrail
+- CloudWatch
+- Cognito
+- Cost Explorer
+- DynamoDB
+- EC2
+- ECS
+- EKS
+- Fargate
+- Lambda
+- API Gateway
+- Redis
+- Route 53
+- S3
+- Shield
+- VPC
+- WAF
+devops_tooling:
+- AWS CDK
+- AWS X-Ray
+- Datadog
+- Docker / Docker Compose
+- GitHub Actions
+- GitLab CI/CD
+- Grafana
+- Helm
+- Incident Response / Troubleshooting
+- Jenkins
+- Kubernetes
+- OpenSearch
+- OpenTelemetry
+- Prometheus
+- Terraform
+security:
+- IAM (least privilege)
+- KMS
+- OAuth 2.0 / JWT
+- Secrets Manager
+- Security Groups
+- Zero-Trust Architecture
+languages_scripting:
+- Bash
+- PowerShell
+- Python
+- TypeScript
+- YAML
+- REST
+- GraphQL
+- WebSockets
+- Webhooks
+collaboration:
+- Agile / Scrum
+- Confluence
+- Git / GitHub
+- Jira
+- Slack
+agentic_ai:
+- AWS Bedrock Agents
+- LangChain
+- LangGraph
+- RAG pipelines
+- FAISS
+- Pinecone
+- OpenAI API
+- Prompt Engineering
+soft_skills:
+- Critical Thinking
+- Decision-Making
+- Leadership
+- Problem-Solving
+- Project Management
+- Stakeholder Management
+
+WORK_EXPERIENCE
+- role: Business Sales Consultant
+  company: Bell Canada
+  location: Toronto, Canada
+  start: 2024-10
+  end: Present
+  highlights:
+  - Achieved 120% of monthly targets by architecting bespoke multi-service connectivity portfolios aligned to client expectations.
+  - Elevated ARPU by 30% using TCO and usage-projection analyses to right-size solutions.
+  - Mentored newly hired consultants on solution-architecture fundamentals and cost-benefit assessment.
+
+- role: Product Process Specialist
+  company: Best Buy Canada
+  location: Toronto, Canada
+  start: 2023-10
+  end: 2024-10
+  highlights:
+  - Earned Shrink-Prevention Excellence Award for securing high-value inventory and sustaining 100% stock accuracy via streamlined workflows and cross-team coordination.
+  - Drove process improvements from frontline feedback, reducing stock put-away time by 25% and increasing employee engagement by 15%.
+
+- role: Broker and Consultant
+  company: Yarn Trading (Self-Employed)
+  location: Mumbai, India
+  start: 2021-01
+  end: 2023-08
+  highlights:
+  - Brokered ~US$29MM in annual contracts with 100% client retention; expanded portfolio with 40% new accounts using price analytics and inventory forecasts.
+  - Built an Android-based real-time order tracking dashboard; automated order confirmations and shortened settlement cycles by 40% through process automation and data governance.
+
+- role: AWS Cloud Associate / Project Engineer
+  company: Wipro Technologies
+  location: Bengaluru, India
+  start: 2019-10
+  end: 2020-12
+  highlights:
+  - Delivered zero-downtime migration of Roads and Maritime Services (Australia) systems to AWS (S3, RDS/PostgreSQL, EC2, EKS).
+  - Authored Terraform/CloudFormation modules reducing environment spin-up time by 70% (40 min → 12 min).
+  - Dockerized 20+ microservices and delivered Kubernetes manifests for consistent EKS rollouts.
+  - Implemented least-privilege IAM and VPC security group controls; added CloudWatch alerts to eliminate crucial audit findings.
+  - Automated CI/CD for EC2 workloads via AWS CodeDeploy and CLI scripts.
+
+PROJECTS
+- name: AWS Cost-Saver Bot (Agentic AI)
+  date: 2025-08
+  description: Flagged idle EC2/EBS/S3 resources and posted Slack alerts using LangChain + Bedrock Agents.
+  outcomes:
+  - Saved ~12% (~US$5K/year) using a containerized, Lambda-based bot orchestrated with CDK + Step Functions.
+  - Reduced false positives from 18% to 3% by tracking suppression history in a Pinecone vector index.
+  stack:
+  - AWS Lambda
+  - AWS CDK
+  - AWS Step Functions
+  - LangChain
+  - AWS Bedrock Agents
+  - Pinecone
+  - Slack (alerts)
+
+- name: Cloud-native e-commerce on EKS
+  date: 2025-04
+  description: Terraform + Helm provisioned Node/TypeScript microservices.
+  outcomes:
+  - Enabled zero-touch blue/green releases via GitHub Actions; reduced deploy time by 85% (45 min → 7 min).
+  - Improved median TTFB by 45% (220 ms → 120 ms) and blocked OWASP Top 10 probes using CloudFront caching + WAF.
+  stack:
+  - EKS
+  - Terraform
+  - Helm
+  - Node.js
+  - TypeScript
+  - GitHub Actions
+  - CloudFront
+  - AWS WAF
+
+EDUCATION
+- credential: Post Graduate Certificate
+  program: Cloud Computing Technologies
+  institution: George Brown College (Canada)
+  year: 2025
+  honors: Dean’s Honour
+  gpa: 3.9
+
+- credential: Post Graduate Certificate
+  program: Project Management
+  institution: Conestoga College (Canada)
+  year: 2024
+  honors: Distinction
+  gpa: 3.6
+
+- credential: Bachelor of Technology (B.Tech.)
+  program: Mechanical Engineering
+  institution: Vellore Institute of Technology (India)
+  year: 2019
+  gpa: 3.2

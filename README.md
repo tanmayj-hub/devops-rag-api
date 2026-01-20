@@ -1,11 +1,11 @@
-# RAG API with FastAPI + Chroma + Ollama (Local)
+# RAG API with FastAPI + Chroma + Ollama (Local + Docker)
 
 A **Retrieval-Augmented Generation (RAG)** API built with **FastAPI**, **ChromaDB**, and **Ollama**.  
 It answers questions by retrieving relevant chunks from a **public knowledge source** (`resume.txt`) and generating an answer with a local LLM.
 
-This repo is **Project 1** of a 4-part DevOps × AI series:
+This repo is part of a 4-part DevOps × AI series:
 - ✅ Project 1: Run locally (FastAPI + Chroma + Ollama)
-- ⏳ Project 2: Containerize with Docker
+- ✅ Project 2: Containerize with Docker
 - ⏳ Project 3: Deploy to Kubernetes
 - ⏳ Project 4: Automate testing with GitHub Actions
 
@@ -30,6 +30,9 @@ This repo is **Project 1** of a 4-part DevOps × AI series:
 ├── embed.py          # Ingestion: chunk + embed resume.txt into Chroma
 ├── resume.txt        # Public knowledge source (intentionally committed)
 ├── requirements.txt  # Runtime dependencies
+├── Dockerfile
+├── docker-compose.yml
+├── .dockerignore
 ├── README.md
 ├── LICENSE
 ├── .gitignore
@@ -39,6 +42,8 @@ This repo is **Project 1** of a 4-part DevOps × AI series:
 > Note: `db/` is intentionally ignored by git so the vector store is always rebuildable from scratch.
 
 ---
+
+# Option A — Run locally (Project 1)
 
 ## Prerequisites
 
@@ -146,6 +151,89 @@ curl -s -X POST "http://127.0.0.1:8000/query?q=What%20is%20my%20name%3F&debug=tr
 
 ---
 
+# Option B — Run with Docker (Project 2)
+
+This runs the project as **two containers**:
+
+* `ollama` container: runs the Ollama model server (port `11434`) and stores models in a Docker volume
+* `rag-api` container: runs the FastAPI API (port `8000`) and calls Ollama over the Docker network
+
+## Prerequisites
+
+* Docker Desktop installed + running
+
+Verify Docker:
+
+```bash
+docker run hello-world
+```
+
+## Start the stack (build + run)
+
+From the repo root:
+
+```bash
+docker compose up --build
+```
+
+This will:
+
+* build the `rag-api` image using the `Dockerfile`
+* pull the `ollama/ollama` image if needed
+* start both containers on a shared Docker network
+
+## Pull required Ollama models (first time only)
+
+In a second terminal:
+
+```bash
+docker compose exec ollama ollama pull tinyllama
+docker compose exec ollama ollama pull nomic-embed-text
+```
+
+> These models are stored in a Docker volume mounted to the `ollama` container, so you don’t need to re-download them every time.
+
+## Build embeddings (ingest) inside Docker
+
+```bash
+docker compose exec rag-api python embed.py
+```
+
+### Where is the Chroma DB in this Docker setup?
+
+By default (with the current compose file), Chroma writes to `./db` **inside the `rag-api` container filesystem**.
+
+* If you run `docker compose down`, the `rag-api` container is removed and the DB is **deleted**.
+* Ollama models persist unless you delete volumes.
+
+## Test the API (host machine)
+
+Swagger UI:
+
+* [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+Example curl:
+
+```bash
+curl -s -X POST "http://127.0.0.1:8000/query?q=What%20is%20my%20name%3F" | python -m json.tool
+```
+
+## Stop
+
+```bash
+docker compose down
+```
+
+## Full cleanup (removes Ollama model cache volume too)
+
+⚠️ This will delete downloaded Ollama models:
+
+```bash
+docker compose down -v
+```
+
+---
+
 ## Rebuild-from-scratch behavior (important)
 
 This project is designed so the Chroma DB is always rebuildable:
@@ -153,7 +241,7 @@ This project is designed so the Chroma DB is always rebuildable:
 * `db/` is ignored by git
 * delete `db/` and re-run ingestion to rebuild from scratch
 
-Rebuild manually:
+Local rebuild:
 
 ```bash
 rm -rf db
@@ -167,22 +255,25 @@ Remove-Item -Recurse -Force db
 python embed.py
 ```
 
+Docker rebuild (DB lives inside the container by default):
+
+```bash
+docker compose down
+docker compose up --build
+docker compose exec ollama ollama pull tinyllama
+docker compose exec ollama ollama pull nomic-embed-text
+docker compose exec rag-api python embed.py
+```
+
 ---
 
 ## Roadmap (Next Projects)
 
-### Project 2 — Docker
-
-* Add `Dockerfile` + `.dockerignore`
-* Build image: `docker build -t devops-rag-api .`
-* Run: `docker run -p 8000:8000 devops-rag-api`
-* Connect to Ollama via HTTP (host Ollama or separate container)
-
 ### Project 3 — Kubernetes
 
 * Add manifests under `deploy/k8s/`
-* Deploy the API
-* Add health checks + service exposure
+* Deploy the API and Ollama as separate workloads
+* Add readiness/liveness probes + service exposure
 
 ### Project 4 — GitHub Actions
 

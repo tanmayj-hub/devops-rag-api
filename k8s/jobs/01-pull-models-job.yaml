@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ollama-pull-models
+  namespace: rag
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: pull
+          image: ollama/ollama:latest
+          command: ["sh", "-lc"]
+          args:
+            - |
+              ollama serve &
+              sleep 3
+              ollama pull qwen2.5:1.5b
+              ollama pull nomic-embed-text
+          volumeMounts:
+            - name: ollama-data
+              mountPath: /root/.ollama
+      volumes:
+        - name: ollama-data
+          persistentVolumeClaim:
+            claimName: ollama-pvc
+  backoffLimit: 1

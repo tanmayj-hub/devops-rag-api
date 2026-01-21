@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-api
+  namespace: rag
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rag-api
+  template:
+    metadata:
+      labels:
+        app: rag-api
+    spec:
+      volumes:
+        - name: chroma-db
+          emptyDir: {}
+
+      initContainers:
+        - name: build-chroma
+          image: devops-rag-api-rag-api:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: OLLAMA_HOST
+              value: "http://ollama:11434"
+            - name: CHROMA_PATH
+              value: "/app/db"
+            - name: EMBED_MODEL
+              value: "nomic-embed-text"
+            - name: CHROMA_COLLECTION
+              value: "docs"
+            - name: CHUNK_MAX_CHARS
+              value: "900"
+          command: ["python", "embed.py"]
+          volumeMounts:
+            - name: chroma-db
+              mountPath: /app/db
+
+      containers:
+        - name: rag-api
+          image: devops-rag-api-rag-api:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: OLLAMA_HOST
+              value: "http://ollama:11434"
+            - name: CHROMA_PATH
+              value: "/app/db"
+            - name: EMBED_MODEL
+              value: "nomic-embed-text"
+            - name: LLM_MODEL
+              value: "qwen2.5:1.5b"
+            - name: CHROMA_COLLECTION
+              value: "docs"
+            - name: TOP_K
+              value: "5"
+            - name: MAX_TOKENS
+              value: "64"
+          ports:
+            - containerPort: 8000
+          volumeMounts:
+            - name: chroma-db
+              mountPath: /app/db
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rag-api
+  namespace: rag
+spec:
+  selector:
+    app: rag-api
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP

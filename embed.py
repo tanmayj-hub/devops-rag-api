@@ -1,52 +1,79 @@
 import os
-import shutil
+from pathlib import Path
+from typing import Any
+
 import chromadb
-import ollama
+from ollama import Client
 
-DB_PATH = "./db"
-COLLECTION_NAME = "docs"
-EMBED_MODEL = "nomic-embed-text"   # or "mxbai-embed-large"
+CHROMA_PATH = os.getenv("CHROMA_PATH", "./db")
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 
-def chunk_text(text: str, chunk_size: int = 900, overlap: int = 150) -> list[str]:
-    text = text.replace("\r\n", "\n")
-    chunks = []
-    start = 0
-    while start < len(text):
-        end = min(len(text), start + chunk_size)
-        chunk = text[start:end].strip()
-        if chunk:
-            chunks.append(chunk)
-        start = end - overlap
-        if start < 0:
-            start = 0
-        if end == len(text):
-            break
+EMBED_MODEL = os.getenv("EMBED_MODEL", "nomic-embed-text")
+COLLECTION_NAME = os.getenv("CHROMA_COLLECTION", "docs")
+MAX_CHARS = int(os.getenv("CHUNK_MAX_CHARS", "900"))
+
+BASE_DIR = Path(__file__).resolve().parent
+RESUME_PATH = Path(os.getenv("RESUME_PATH", str(BASE_DIR / "resume.txt")))
+
+
+def chunk_text_section_aware(text: str, max_chars: int = 900) -> list[str]:
+    text = text.replace("\r\n", "\n").strip()
+    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+
+    chunks: list[str] = []
+    current: list[str] = []
+    current_len = 0
+
+    for p in paragraphs:
+        added_len = len(p) + (2 if current else 0)
+        if current and (current_len + added_len) > max_chars:
+            chunks.append("\n\n".join(current).strip())
+            current = [p]
+            current_len = len(p)
+        else:
+            current.append(p)
+            current_len += added_len
+
+    if current:
+        chunks.append("\n\n".join(current).strip())
+
     return chunks
 
-def embed(text: str) -> list[float]:
-    resp = ollama.embeddings(model=EMBED_MODEL, prompt=text)
-    return resp["embedding"]
 
-# OPTIONAL: rebuild DB from scratch for consistency
-if os.path.exists(DB_PATH):
-    shutil.rmtree(DB_PATH)
+def embed_text(client: Client, text: str) -> list[float]:
+    resp: dict[str, Any] = client.embeddings(model=EMBED_MODEL, prompt=text)
+    embedding = resp.get("embedding")
+    if not embedding:
+        raise RuntimeError("No embedding returned from Ollama embeddings()")
+    return embedding
 
-client = chromadb.PersistentClient(path=DB_PATH)
-collection = client.get_or_create_collection(COLLECTION_NAME)
 
-with open("resume.txt", "r", encoding="utf-8") as f:
-    text = f.read()
+def main():
+    if not RESUME_PATH.exists():
+        raise FileNotFoundError(f"resume.txt not found at: {RESUME_PATH}")
 
-chunks = chunk_text(text)
+    raw = RESUME_PATH.read_text(encoding="utf-8", errors="ignore")
+    chunks = chunk_text_section_aware(raw, max_chars=MAX_CHARS)
 
-ids = [f"resume-{i:04d}" for i in range(len(chunks))]
-embeddings = [embed(c) for c in chunks]
+    ollama = Client(host=OLLAMA_HOST)
 
-collection.add(
-    ids=ids,
-    documents=chunks,
-    embeddings=embeddings,
-    metadatas=[{"source": "resume.txt", "chunk": i} for i in range(len(chunks))]
-)
+    Path(CHROMA_PATH).mkdir(parents=True, exist_ok=True)
+    chroma = chromadb.PersistentClient(path=CHROMA_PATH)
 
-print(f"Stored {len(chunks)} chunks + embeddings in Chroma.")
+    # Rebuildable DB: wipe collection each run
+    try:
+        chroma.delete_collection(name=COLLECTION_NAME)
+    except Exception:
+        pass
+    collection = chroma.get_or_create_collection(name=COLLECTION_NAME)
+
+    ids = [f"resume-{i:04d}" for i in range(len(chunks))]
+    metas = [{"source": "resume.txt", "chunk": i} for i in range(len(chunks))]
+    embs = [embed_text(ollama, c) for c in chunks]
+
+    collection.add(ids=ids, documents=chunks, metadatas=metas, embeddings=embs)
+    print(f"✅ Embedded {len(chunks)} chunks into '{COLLECTION_NAME}' at '{CHROMA_PATH}'")
+
+
+if __name__ == "__main__":
+    main()

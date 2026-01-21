@@ -12,6 +12,12 @@ services:
       - "8000:8000"
     environment:
       - OLLAMA_HOST=http://ollama:11434
+      - LLM_MODEL=qwen2.5:1.5b
+      - EMBED_MODEL=nomic-embed-text
+      - TOP_K=5
+      - MAX_TOKENS=64
+      - CHROMA_COLLECTION=docs
+      # CHROMA_PATH defaults to ./db (container filesystem) unless you mount it
     depends_on:
       - ollama
 

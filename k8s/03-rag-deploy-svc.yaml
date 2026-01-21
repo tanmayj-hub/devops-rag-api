@@ -18,6 +18,22 @@ spec:
           emptyDir: {}
 
       initContainers:
+        - name: wait-for-ollama-models
+          image: curlimages/curl:8.5.0
+          command: ["sh", "-lc"]
+          args:
+            - |
+              set -e
+              echo "Waiting for Ollama..."
+              until curl -s http://ollama:11434/ >/dev/null; do
+                sleep 2
+              done
+              echo "Ollama is up. Waiting for nomic-embed-text..."
+              until curl -s http://ollama:11434/api/tags | grep -q "nomic-embed-text"; do
+                sleep 2
+              done
+              echo "Model nomic-embed-text found."
+
         - name: build-chroma
           image: devops-rag-api-rag-api:latest
           imagePullPolicy: IfNotPresent
@@ -61,7 +77,6 @@ spec:
           volumeMounts:
             - name: chroma-db
               mountPath: /app/db
-
 ---
 apiVersion: v1
 kind: Service

@@ -1,5 +1,5 @@
 import os
-from typing import Any
+from typing import Any, Optional
 
 import chromadb
 from fastapi import FastAPI, Query
@@ -21,7 +21,11 @@ MAX_TOKENS = int(os.getenv("MAX_TOKENS", "64"))
 ollama = Client(host=OLLAMA_HOST)
 
 chroma = chromadb.PersistentClient(path=CHROMA_PATH)
-collection = chroma.get_or_create_collection(name=COLLECTION_NAME)
+
+
+def get_collection():
+    # Re-open per request to avoid stale handles if embeddings are rebuilt
+    return chroma.get_or_create_collection(name=COLLECTION_NAME)
 
 
 def embed_text(text: str) -> list[float]:
@@ -30,6 +34,15 @@ def embed_text(text: str) -> list[float]:
     if not embedding:
         raise RuntimeError("No embedding returned from Ollama embeddings()")
     return embedding
+
+
+def infer_section(q: str) -> Optional[str]:
+    u = q.upper()
+    if "PROFILE" in u:
+        return "PROFILE"
+    if "SUMMARY" in u:
+        return "SUMMARY"
+    return None
 
 
 @app.get("/health")
@@ -44,11 +57,20 @@ def query(
 ):
     q_emb = embed_text(q)
 
-    results = collection.query(
-        query_embeddings=[q_emb],
-        n_results=TOP_K,
-        include=["documents", "metadatas", "distances"],
-    )
+    section = infer_section(q)
+    collection = get_collection()
+
+    query_kwargs: dict[str, Any] = {
+        "query_embeddings": [q_emb],
+        "n_results": TOP_K,
+        "include": ["documents", "metadatas", "distances"],
+    }
+
+    # If the question explicitly references PROFILE or SUMMARY, filter to that section
+    if section:
+        query_kwargs["where"] = {"section": section}
+
+    results = collection.query(**query_kwargs)
 
     docs = (results.get("documents") or [[]])[0]
     context = "\n\n---\n\n".join(docs) if docs else ""
@@ -61,7 +83,11 @@ def query(
                 "reason": "empty_context",
                 "ollama_host": OLLAMA_HOST,
                 "chroma_path": CHROMA_PATH,
+                "embed_model": EMBED_MODEL,
+                "llm_model": LLM_MODEL,
                 "collection": COLLECTION_NAME,
+                "top_k": TOP_K,
+                "section_filter": section,
                 "results": results,
             }
         return payload
@@ -94,6 +120,7 @@ Extracted value:"""
 
     answer = (llm_resp.get("response") or "").strip()
 
+    # Trim accidental quotes
     if answer.startswith('"') and answer.endswith('"') and len(answer) >= 2:
         answer = answer[1:-1].strip()
 
@@ -114,6 +141,7 @@ Extracted value:"""
             "llm_model": LLM_MODEL,
             "collection": COLLECTION_NAME,
             "top_k": TOP_K,
+            "section_filter": section,
             "results": results,
         }
     return payload

@@ -1,0 +1,12 @@
+[
+  { "q": "In PROFILE, what is the exact value after 'name:'?", "expected": "Tanmay Jhunjhunwala" },
+  { "q": "In PROFILE, what is the exact value after 'location:'?", "expected": "Toronto, ON" },
+  { "q": "In PROFILE, what is the exact value after 'email:'?", "expected": "tanmay.work96@outlook.com" },
+
+  { "q": "In PROFILE, what is the exact value after 'github:'?", "expected": "github.com/tanmayj-hub" },
+
+  { "q": "In SUMMARY, copy the entire line that starts with 'role_focus:' exactly.", "expected": "AWS Solutions Architect | DevOps | Cloud Engineer" },
+
+  { "q": "In SUMMARY, what is the exact value after 'years_experience:'?", "expected": "5" }
+]
+

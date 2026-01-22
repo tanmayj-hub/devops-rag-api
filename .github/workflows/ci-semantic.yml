@@ -1,0 +1,63 @@
+name: Semantic RAG Tests
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  semantic-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Start Ollama
+        run: docker compose up -d ollama
+
+      - name: Pull Ollama models
+        run: |
+          docker compose exec -T ollama ollama pull nomic-embed-text
+          docker compose exec -T ollama ollama pull qwen2.5:1.5b
+
+      - name: Build + start API
+        run: docker compose up -d --build rag-api
+
+      - name: Build embeddings (Chroma)
+        run: docker compose exec -T rag-api python embed.py
+
+      - name: Restart API (refresh collection handle)
+        run: docker compose restart rag-api
+
+      - name: Wait for API health
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://localhost:8000/health | grep -q '"ok"'; then
+              echo "API is healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "API did not become healthy in time"
+          docker compose logs rag-api
+          exit 1
+
+      - name: Run semantic tests
+        run: python tests/run_semantic_tests.py http://localhost:8000
+
+      - name: Dump logs on failure
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs rag-api
+          docker compose logs ollama
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v

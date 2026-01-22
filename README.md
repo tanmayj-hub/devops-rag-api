@@ -125,16 +125,22 @@ Swagger UI:
 
 ## Test with curl
 
+Notes:
+
+* This API extracts answers from `resume.txt` (it’s not a general chatbot).
+* If the answer isn’t present in `resume.txt`, the API returns `NOT_FOUND` (expected).
+* If your machine is slower, add `-m 120` to curl to avoid timeouts.
+
 Basic query:
 
 ```bash
-curl -s -X POST "http://127.0.0.1:8000/query?q=What%20is%20my%20name%3F" | python -m json.tool
+curl -sS -m 120 -X POST "http://127.0.0.1:8000/query?q=What%20is%20my%20name%3F" | python -m json.tool
 ```
 
 Debug mode:
 
 ```bash
-curl -s -X POST "http://127.0.0.1:8000/query?q=What%20is%20my%20name%3F&debug=true" | python -m json.tool
+curl -sS -m 120 -X POST "http://127.0.0.1:8000/query?q=What%20is%20my%20name%3F&debug=true" | python -m json.tool
 ```
 
 ---
@@ -197,7 +203,7 @@ Swagger UI:
 Example curl:
 
 ```bash
-curl -s -X POST "http://127.0.0.1:8000/query?q=What%20is%20my%20name%3F" | python -m json.tool
+curl -sS -m 120 -X POST "http://127.0.0.1:8000/query?q=What%20is%20my%20name%3F" | python -m json.tool
 ```
 
 ---
@@ -306,13 +312,13 @@ Swagger UI:
 Example curl:
 
 ```bash
-curl -s -X POST "http://127.0.0.1:8000/query?q=What%20is%20my%20name%3F" | python -m json.tool
+curl -sS -m 120 -X POST "http://127.0.0.1:8000/query?q=What%20is%20my%20name%3F" | python -m json.tool
 ```
 
 Debug:
 
 ```bash
-curl -s -X POST "http://127.0.0.1:8000/query?q=What%20is%20my%20name%3F&debug=true" | python -m json.tool
+curl -sS -m 120 -X POST "http://127.0.0.1:8000/query?q=What%20is%20my%20name%3F&debug=true" | python -m json.tool
 ```
 
 ---

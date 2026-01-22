@@ -34,6 +34,12 @@ spec:
               done
               echo "Model nomic-embed-text found."
 
+              echo "Waiting for generation model (qwen2.5:1.5b)..."
+              until curl -s http://ollama:11434/api/tags | grep -q "qwen2.5:1.5b"; do
+                sleep 2
+              done
+              echo "Model qwen2.5:1.5b found."
+
         - name: build-chroma
           image: devops-rag-api-rag-api:latest
           imagePullPolicy: IfNotPresent
@@ -71,7 +77,7 @@ spec:
             - name: TOP_K
               value: "5"
             - name: MAX_TOKENS
-              value: "64"
+              value: "16"
           ports:
             - containerPort: 8000
           volumeMounts:

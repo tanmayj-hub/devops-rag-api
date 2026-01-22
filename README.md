@@ -1,13 +1,13 @@
-# RAG API with FastAPI + Chroma + Ollama (Local + Docker + Kubernetes)
+# RAG API with FastAPI + Chroma + Ollama (Local + Docker + Kubernetes + CI)
 
 A **Retrieval-Augmented Generation (RAG)** API built with **FastAPI**, **ChromaDB**, and **Ollama**.  
-It answers questions by retrieving relevant chunks from a **public knowledge source** (`resume.txt`) and generating an answer with a local LLM.
+It answers questions by retrieving relevant chunks from a **public knowledge source** (`resume.txt`) and generating/extracting an answer with a local LLM.
 
 This repo is part of a 4-part DevOps × AI series:
 - ✅ Project 1: Run locally (FastAPI + Chroma + Ollama)
 - ✅ Project 2: Containerize with Docker
 - ✅ Project 3: Deploy to Kubernetes (Minikube)
-- ⏳ Project 4: Automate testing with GitHub Actions
+- ✅ Project 4: Automate testing with GitHub Actions (PR tests + main tests)
 
 ---
 
@@ -16,9 +16,12 @@ This repo is part of a 4-part DevOps × AI series:
 - Chunking + embedding a document into a local vector DB (**ChromaDB**)
 - Using **Ollama** for:
   - **Embeddings:** `nomic-embed-text`
-  - **Generation:** `qwen2.5:1.5b`
+  - **Generation/Extraction:** `qwen2.5:1.5b`
 - Rebuildable workflow (delete `db/` and re-ingest anytime)
 - Optional debug mode to inspect retrieval quality (`debug=true`)
+- CI design that separates:
+  - **Deterministic retrieval checks** on PRs
+  - **End-to-end semantic extraction checks** on merges to `main`
 
 ---
 
@@ -26,7 +29,7 @@ This repo is part of a 4-part DevOps × AI series:
 
 ```text
 .
-├── app.py                 # FastAPI app (POST /query)
+├── app.py                 # FastAPI app (POST /query, GET /health)
 ├── embed.py               # Ingestion: chunk + embed resume.txt into Chroma
 ├── resume.txt             # Public knowledge source (intentionally committed)
 ├── requirements.txt       # Runtime dependencies
@@ -43,6 +46,11 @@ This repo is part of a 4-part DevOps × AI series:
 │   ├── 03-rag-deploy-svc.yaml
 │   └── jobs/
 │       └── 01-pull-models-job.yaml
+├── tests/
+│   ├── semantic_cases.json          # End-to-end expected outputs (LLM extraction)
+│   ├── run_semantic_tests.py        # End-to-end test runner
+│   ├── retrieval_cases.json         # NextWork-style retrieval assertions
+│   └── run_retrieval_tests.py       # Retrieval test runner (mock mode)
 └── db/                    # Created locally by Chroma (ignored by git)
 ````
 
@@ -76,13 +84,13 @@ Start Ollama:
 ollama serve
 ```
 
-Verify Ollama is up:
+Verify:
 
 ```bash
 curl http://localhost:11434
 ```
 
-Pull the required models:
+Pull required models:
 
 ```bash
 ollama pull qwen2.5:1.5b
@@ -120,6 +128,12 @@ uvicorn app:app --reload
 Swagger UI:
 
 * [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+Health:
+
+```bash
+curl http://127.0.0.1:8000/health
+```
 
 ---
 
@@ -224,17 +238,17 @@ docker compose down -v
 
 # Option C — Run on Kubernetes with Minikube (Project 3)
 
-This runs **everything inside Kubernetes**:
+This runs everything inside Kubernetes:
 
 * **Ollama** service (`ollama:11434`)
 * **RAG API** service (`rag-api:8000`) calling Ollama via Kubernetes DNS
 
 ## Why this approach?
 
-* **Simple + repeatable:** `kubectl apply -f k8s/` recreates the stack
-* **Production-aligned:** service discovery (`http://ollama:11434`) — no host hacks
-* **Models persist:** Ollama models stored on a **PVC**
-* **DB is rebuildable (NOT persistent):** Chroma DB is rebuilt automatically at pod start by an **initContainer** (no embed Job needed)
+* Simple + repeatable: `kubectl apply -f k8s/` recreates the stack
+* Production-aligned: service discovery (`http://ollama:11434`) — no host hacks
+* Models persist: Ollama models stored on a **PVC**
+* DB is rebuildable (NOT persistent): Chroma DB is rebuilt automatically at pod start by an **initContainer**
 
 ---
 
@@ -281,7 +295,7 @@ kubectl get pods -n rag
 kubectl get svc -n rag
 ```
 
-> The `rag-api` pod will only become Ready after its initContainer finishes running `python embed.py`.
+> The `rag-api` pod becomes Ready after its initContainer finishes running `python embed.py`.
 
 ---
 
@@ -289,7 +303,7 @@ kubectl get svc -n rag
 
 This pulls:
 
-* `qwen2.5:1.5b` (generation)
+* `qwen2.5:1.5b` (generation/extraction)
 * `nomic-embed-text` (embeddings)
 
 ```bash
@@ -323,38 +337,131 @@ curl -sS -m 120 -X POST "http://127.0.0.1:8000/query?q=What%20is%20my%20name%3F&
 
 ---
 
-## Rebuild-from-scratch (Kubernetes)
+# Project 4 — Automated Testing with GitHub Actions (CI)
 
-Delete the namespace (removes Deployments/Services/Pods/Jobs):
+This repo includes **two CI workflows**:
+
+## 1) PR / Branch CI: Deterministic Retrieval Tests (NextWork-style)
+
+**Workflow:** `.github/workflows/ci-retrieval-mock.yml`
+**Triggers:** `pull_request` and `push` (all branches except `main`)
+**Mode:** `USE_MOCK_LLM=1`
+
+What it validates:
+
+* Embeddings are built successfully
+* Chroma retrieval returns the expected **context**
+* Tests are deterministic (no LLM output randomness)
+
+How it works:
+
+* Starts Ollama
+* Pulls **only** `nomic-embed-text` (embeddings)
+* Runs `embed.py` to create the vector DB
+* Starts the API in **mock mode** (`USE_MOCK_LLM=1`)
+* Runs: `python tests/run_retrieval_tests.py http://localhost:8000`
+
+### Run retrieval tests locally (Docker Compose)
 
 ```bash
-kubectl delete namespace rag
-```
+docker compose up -d ollama
+docker compose exec ollama ollama pull nomic-embed-text
 
-Recreate:
+USE_MOCK_LLM=1 docker compose up -d --build rag-api
+docker compose exec rag-api python embed.py
+docker compose restart rag-api
 
-```bash
-kubectl apply -f k8s/
-kubectl apply -f k8s/jobs/01-pull-models-job.yaml
+python tests/run_retrieval_tests.py http://localhost:8000
 ```
 
 ---
 
-## Stop Minikube (optional)
+## 2) Main CI: End-to-End Semantic Extraction Tests (Your tests)
+
+**Workflow:** `.github/workflows/ci-semantic.yml`
+**Triggers:** push to `main` (and manual `workflow_dispatch`)
+**Mode:** normal production mode (`USE_MOCK_LLM=0`)
+
+What it validates:
+
+* Full end-to-end pipeline:
+
+  * retrieval + LLM extraction output
+* Regression protection for prompt/model changes
+
+How it works:
+
+* Starts Ollama
+* Pulls both models:
+
+  * `nomic-embed-text` (embeddings)
+  * `qwen2.5:1.5b` (generation/extraction)
+* Starts the API
+* Runs ingestion (`embed.py`)
+* Runs: `python tests/run_semantic_tests.py http://localhost:8000`
+
+### Run end-to-end semantic tests locally (Docker Compose)
 
 ```bash
-minikube stop
+docker compose up -d ollama
+docker compose exec ollama ollama pull nomic-embed-text
+docker compose exec ollama ollama pull qwen2.5:1.5b
+
+docker compose up -d --build rag-api
+docker compose exec rag-api python embed.py
+docker compose restart rag-api
+
+python tests/run_semantic_tests.py http://localhost:8000
 ```
 
 ---
 
-## Roadmap (Next Project)
+## What is Mock LLM mode?
 
-### Project 4 — GitHub Actions
+Mock mode returns the **retrieved context** directly instead of calling the LLM.
 
-* CI: lint/test on push + PR
-* Build Docker image in CI
-* Optional: rerun ingestion when `resume.txt` changes
+* Production mode (`USE_MOCK_LLM=0`): uses Ollama generation/extraction
+* Mock mode (`USE_MOCK_LLM=1`): returns retrieved text for deterministic tests
+
+Why it matters:
+
+* LLM outputs can be non-deterministic
+* CI must be deterministic to be trusted on PRs
+
+---
+
+# Fork-and-Replicate Guide (Project 4)
+
+If you fork this repo and want to replicate Project 4:
+
+1. Fork the repo on GitHub (Actions should be enabled by default on your fork)
+2. Clone your fork:
+
+```bash
+git clone <your-fork-url>
+cd devops-rag-api
+```
+
+3. Create a feature branch:
+
+```bash
+git checkout -b feature/my-change
+```
+
+4. Make a change and push:
+
+```bash
+git add .
+git commit -m "My change"
+git push -u origin feature/my-change
+```
+
+5. Open a Pull Request into `main`:
+
+* The **PR workflow** runs automatically (mock retrieval tests).
+* When you merge the PR, the **main workflow** runs automatically (end-to-end semantic tests).
+
+Optional (recommended): add branch protection for `main` so merges require the PR workflow to pass.
 
 ---
 

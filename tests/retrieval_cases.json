@@ -1,0 +1,14 @@
+[
+  {
+    "q": "In PROFILE, what is the exact value after 'name:'?",
+    "must_contain": ["PROFILE", "name:", "Tanmay Jhunjhunwala"]
+  },
+  {
+    "q": "In PROFILE, what is the exact value after 'location:'?",
+    "must_contain": ["PROFILE", "location:", "Toronto, ON"]
+  },
+  {
+    "q": "In SUMMARY, what is the exact value after 'role_focus:'?",
+    "must_contain": ["SUMMARY", "role_focus:", "AWS Solutions Architect"]
+  }
+]

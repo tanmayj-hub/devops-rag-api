@@ -1,12 +1,12 @@
-name: Semantic RAG Tests (Main)
+name: Retrieval Tests (Mock Mode) - PR
 
 on:
+  pull_request:
   push:
-    branches: ["main"]
-  workflow_dispatch:
+    branches-ignore: ["main"]
 
 jobs:
-  semantic-tests:
+  retrieval-tests:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,13 +21,12 @@ jobs:
       - name: Start Ollama
         run: docker compose up -d ollama
 
-      - name: Pull Ollama models
-        run: |
-          docker compose exec -T ollama ollama pull nomic-embed-text
-          docker compose exec -T ollama ollama pull qwen2.5:1.5b
+      - name: Pull embedding model only
+        run: docker compose exec -T ollama ollama pull nomic-embed-text
 
-      - name: Build + start API
-        run: docker compose up -d --build rag-api
+      - name: Build + start API (mock mode)
+        run: |
+          USE_MOCK_LLM=1 docker compose up -d --build rag-api
 
       - name: Build embeddings (Chroma)
         run: docker compose exec -T rag-api python embed.py
@@ -48,8 +47,8 @@ jobs:
           docker compose logs rag-api
           exit 1
 
-      - name: Run semantic tests
-        run: python tests/run_semantic_tests.py http://localhost:8000
+      - name: Run retrieval tests
+        run: python tests/run_retrieval_tests.py http://localhost:8000
 
       - name: Dump logs on failure
         if: failure()

@@ -17,6 +17,7 @@ services:
       - TOP_K=5
       - MAX_TOKENS=64
       - CHROMA_COLLECTION=docs
+      - USE_MOCK_LLM=${USE_MOCK_LLM:-0}
       # CHROMA_PATH defaults to ./db (container filesystem) unless you mount it
     depends_on:
       - ollama

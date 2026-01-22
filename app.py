@@ -18,8 +18,10 @@ COLLECTION_NAME = os.getenv("CHROMA_COLLECTION", "docs")
 TOP_K = int(os.getenv("TOP_K", "5"))
 MAX_TOKENS = int(os.getenv("MAX_TOKENS", "64"))
 
-ollama = Client(host=OLLAMA_HOST)
+# Mock mode: return retrieved context directly (deterministic for CI)
+USE_MOCK_LLM = os.getenv("USE_MOCK_LLM", "0") == "1"
 
+ollama = Client(host=OLLAMA_HOST)
 chroma = chromadb.PersistentClient(path=CHROMA_PATH)
 
 
@@ -81,6 +83,24 @@ def query(
         if debug:
             payload["debug"] = {
                 "reason": "empty_context",
+                "mode": "mock" if USE_MOCK_LLM else "llm",
+                "ollama_host": OLLAMA_HOST,
+                "chroma_path": CHROMA_PATH,
+                "embed_model": EMBED_MODEL,
+                "llm_model": LLM_MODEL,
+                "collection": COLLECTION_NAME,
+                "top_k": TOP_K,
+                "section_filter": section,
+                "results": results,
+            }
+        return payload
+
+    # Mock mode: return retrieved context directly (deterministic)
+    if USE_MOCK_LLM:
+        payload: dict[str, Any] = {"answer": context}
+        if debug:
+            payload["debug"] = {
+                "mode": "mock",
                 "ollama_host": OLLAMA_HOST,
                 "chroma_path": CHROMA_PATH,
                 "embed_model": EMBED_MODEL,
@@ -135,6 +155,7 @@ Extracted value:"""
     payload: dict[str, Any] = {"answer": answer}
     if debug:
         payload["debug"] = {
+            "mode": "llm",
             "ollama_host": OLLAMA_HOST,
             "chroma_path": CHROMA_PATH,
             "embed_model": EMBED_MODEL,
